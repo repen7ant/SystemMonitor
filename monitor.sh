@@ -1,14 +1,44 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+RESET='\033[0m'
+
+usage() {
+    echo -e "${CYAN}Usage:${RESET} $0 <log_directory> [interval_seconds]"
+    echo ""
+    echo "  <log_directory>      Required. Path to the directory for log files."
+    echo "  [interval_seconds]   Optional. Collection interval in seconds (default: 60)."
+    echo ""
+    echo -e "${CYAN}Example:${RESET} $0 /var/log/sysmon 30"
+    exit 1
+}
+
 check_args() {
     if [[ $# -lt 1 ]]; then
-        echo "Usage: $0 <log_directory> [interval_seconds]"
-        exit 1
+        echo -e "${RED}Error:${RESET} log directory is required."
+        usage
     fi
 
     if ! [[ "${2:-60}" =~ ^[0-9]+$ ]] || [[ "${2:-60}" -lt 1 ]]; then
-        echo "Error: interval must be a positive integer"
+        echo -e "${RED}Error:${RESET} interval must be a positive integer."
         exit 1
+    fi
+}
+
+init_log_dir() {
+    local log_dir="$1"
+
+    if [[ ! -d "$log_dir" ]]; then
+        mkdir -p "$log_dir"
+        echo -e "${GREEN}✔${RESET} Directory created: ${CYAN}${log_dir}${RESET}"
+    else
+        echo -e "${GREEN}✔${RESET} Directory found: ${CYAN}${log_dir}${RESET}"
     fi
 }
 
@@ -67,7 +97,20 @@ write_report() {
     local log_file="$1"
     local timestamp
     timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
-    build_report "$timestamp" >>"$log_file"
+
+    local report
+    report="$(build_report "$timestamp")"
+
+    echo "$report" >>"$log_file"
+
+    echo -e "${BOLD}${report}${RESET}"
+    echo -e "  ${GREEN}✔${RESET} Written to ${CYAN}${log_file}${RESET}\n"
+}
+
+setup_trap() {
+    local log_file="$1"
+    trap "echo -e \"\n${YELLOW}Monitoring stopped.${RESET} Log: ${CYAN}${log_file}${RESET}\"; exit 0" \
+        SIGINT SIGTERM
 }
 
 main() {
@@ -76,8 +119,18 @@ main() {
     local log_dir="$1"
     local interval="${2:-60}"
 
-    mkdir -p "$log_dir"
+    init_log_dir "$log_dir"
+
     local log_file="$log_dir/monitor_$(date +%Y-%m-%d).log"
+
+    setup_trap "$log_file"
+
+    echo ""
+    echo -e "${BOLD}Monitoring started${RESET}"
+    echo -e "  Log file : ${CYAN}${log_file}${RESET}"
+    echo -e "  Interval : ${CYAN}${interval}s${RESET}"
+    echo -e "  Stop with: ${YELLOW}Ctrl+C${RESET}"
+    echo ""
 
     while true; do
         write_report "$log_file"
