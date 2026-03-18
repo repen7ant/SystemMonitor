@@ -1,0 +1,12 @@
+[Unit]
+Description=System Monitor
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/monitor.sh /var/log/sysmon 3600
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
