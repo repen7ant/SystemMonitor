@@ -21,8 +21,8 @@ while true; do
     CPU_LOAD="$(uptime | awk -F'[,:]' '{for(i=NF;i>=1;i--){if($i~/[0-9]+\.[0-9]+/){print $i;break}}}' | awk '{print $1}')"
     MEM_USAGE="$(awk '/^MemTotal:/{total=$2}/^MemAvailable:/{avail=$2}END{printf "%.0f",(1-avail/total)*100}' /proc/meminfo)"
     DISK_USAGE="$(df -h / | awk 'NR==2{gsub(/%/,"",$5);print $5}')"
-    TOP_CPU="$(ps -eo comm,%cpu --sort=-%cpu | awk 'NR>1&&$2>0{printf "  %d. %s (%.1f%%)\n",NR-1,$1,$2}' | head -5)"
-    TOP_MEM="$(ps -eo comm,rss --sort=-rss | awk 'NR>1&&$2>0{if($2>=1048576)printf "  %d. %s (%.1fGB)\n",NR-1,$1,$2/1048576;else if($2>=1024)printf "  %d. %s (%.0fMB)\n",NR-1,$1,$2/1024;else printf "  %d. %s (%dKB)\n",NR-1,$1,$2}' | head -5)"
+    TOP_CPU="$(ps -eo %cpu,comm --sort=-%cpu | awk 'NR>1&&$1>0&&$2!="ps"{printf "  %d. %s (%.1f%%)\n",++n,$2,$1}' | head -5)"
+    TOP_MEM="$(ps -eo rss,comm --sort=-rss | awk 'NR>1&&$1>0{if($1>=1048576)printf "  %d. %s (%.1fGB)\n",++n,$2,$1/1048576;else if($1>=1024)printf "  %d. %s (%.0fMB)\n",++n,$2,$1/1024;else printf "  %d. %s (%dKB)\n",++n,$2,$1}' | head -5)"
 
     {
         echo ""
