@@ -107,7 +107,8 @@ build_report() {
 }
 
 write_report() {
-    local log_file="$1"
+    local log_dir="$1"
+    local log_file="$log_dir/monitor_$(date +%Y-%m-%d).log"
     local timestamp
     timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
 
@@ -121,8 +122,8 @@ write_report() {
 }
 
 setup_trap() {
-    local log_file="$1"
-    trap "echo -e \"\n${YELLOW}Monitoring stopped.${RESET} Log: ${CYAN}${log_file}${RESET}\"; exit 0" \
+    local log_dir="$1"
+    trap "echo -e \"\n${YELLOW}Monitoring stopped.${RESET} Log: ${CYAN}${log_dir}${RESET}\"; exit 0" \
         SIGINT SIGTERM
 }
 
@@ -146,7 +147,7 @@ main() {
     echo ""
 
     while true; do
-        write_report "$log_file"
+        write_report "$log_dir"
         sleep "$interval"
     done
 }
