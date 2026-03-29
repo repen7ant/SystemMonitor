@@ -18,7 +18,7 @@ chmod +x monitor.sh
 
 ```bash
 # Example: write logs to /var/log/sysmon every 30 seconds
-./monitor_v3.sh /var/log/sysmon 30
+./monitor.sh /var/log/sysmon 30
 ```
 
 Stop with `Ctrl+C`.
@@ -82,4 +82,4 @@ To change the log directory or interval, edit `ExecStart` in `monitor.service`, 
 
 - Linux
 - Bash 4+
-- Standard utilities: `ps`, `df`, `awk`, `uptime`
+- Standard utilities: `ps`, `df`, `awk`
