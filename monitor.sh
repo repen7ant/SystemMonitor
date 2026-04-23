@@ -110,11 +110,19 @@ get_disk_usage() {
 
 get_top_cpu() {
     ps -eo %cpu,comm --no-headers |
-        awk '{ arr[$2] += $1 }
-             END { for (i in arr) printf "%.1f %s\n", arr[i], i }' |
+        awk '{
+            cpu = $1
+            name = substr($0, index($0, $2), 15)
+            arr[name] += cpu
+        }
+        END { for (i in arr) printf "%.1f %s\n", arr[i], i }' |
         sort -rnk1 |
         head -5 |
-        awk '{ printf "  %d. %s (%.1f%%)\n", ++n, $2, $1 }'
+        awk '{
+            cpu = $1
+            name = substr($0, index($0, $2))
+            printf "  %d. %s (%.1f%%)\n", ++n, name, cpu
+        }'
 }
 
 get_top_mem() {
@@ -122,15 +130,16 @@ get_top_mem() {
     {
         split($1, path, "/")
         pid = path[3]
-        
+
         comm_file = "/proc/" pid "/comm"
         if ((getline comm < comm_file) > 0) {
+            comm = substr(comm, 1, 15)
             if (comm !~ /^(ps|awk|grep|bash|cat)$/) {
                 arr[comm] += $3
             }
         }
         close(comm_file)
-    } 
+    }
     END {
         for (i in arr) {
             if (arr[i] > 0) printf "%d %s\n", arr[i], i
@@ -139,11 +148,13 @@ get_top_mem() {
         sort -rnk1 |
         head -5 |
         awk '{
-        n++;
-        if ($1 >= 1048576) printf "  %d. %s (%.1fGB)\n", n, $2, $1/1048576
-        else if ($1 >= 1024) printf "  %d. %s (%.0fMB)\n", n, $2, $1/1024
-        else printf "  %d. %s (%dKB)\n", n, $2, $1
-    }'
+            n++
+            cpu = $1
+            name = substr($0, index($0, $2))
+            if (cpu >= 1048576) printf "  %d. %s (%.1fGB)\n", n, name, cpu/1048576
+            else if (cpu >= 1024) printf "  %d. %s (%.0fMB)\n", n, name, cpu/1024
+            else printf "  %d. %s (%dKB)\n", n, name, cpu
+        }'
 }
 
 build_report() {

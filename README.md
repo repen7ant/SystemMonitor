@@ -34,24 +34,25 @@ A new file is created each day during long-running sessions.
 ### Report example
 
 ```bash
-=== Report for 2026-04-23 22:58:33 ===
-CPU Load:        5.5
+=== Report for 2026-04-23 23:36:54 ===
+CPU Load:        7.0
 Memory Usage:    39%
 Disk Usage (/):  24%
 
 Top processes by CPU:
-  1. Isolated (25.0%)
-  2. firefox (8.9%)
-  3. github-desktop (3.1%)
-  4. Xorg (1.9%)
+  1. Isolated Web Co (16.0%)
+  2. firefox (9.1%)
+  3. Xorg (1.9%)
+  4. github-desktop (1.4%)
   5. v2ray (1.0%)
 
 Top processes by memory:
-  1. Isolated (1.7GB)
-  2. firefox (907MB)
-  3. Telegram (406MB)
-  4. github-desktop (357MB)
-  5. kitty (194MB)
+  1. Isolated Web Co (1.8GB)
+  2. firefox (871MB)
+  3. Telegram (400MB)
+  4. github-desktop (343MB)
+  5. kitty (270MB)
+  ✔ Written to logs/monitor_2026-04-23.log
 ```
 
 ## Running as a systemd service
