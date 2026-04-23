@@ -43,7 +43,19 @@ init_log_dir() {
 }
 
 get_cpu_load() {
-    top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4}'
+    local cpu1 cpu2
+    cpu1=$(awk '/^cpu / {print $2+$3+$4+$5+$6+$7+$8, $5}' /proc/stat)
+    sleep 1
+    cpu2=$(awk '/^cpu / {print $2+$3+$4+$5+$6+$7+$8, $5}' /proc/stat)
+
+    local total1 idle1 total2 idle2
+    total1=$(echo "$cpu1" | awk '{print $1}')
+    idle1=$(echo "$cpu1" | awk '{print $2}')
+    total2=$(echo "$cpu2" | awk '{print $1}')
+    idle2=$(echo "$cpu2" | awk '{print $2}')
+
+    awk -v t1="$total1" -v i1="$idle1" -v t2="$total2" -v i2="$idle2" \
+        'BEGIN { dt=t2-t1; di=i2-i1; printf "%.1f", (dt-di)/dt*100 }'
 }
 
 get_memory_usage() {
@@ -59,9 +71,9 @@ get_disk_usage() {
 }
 
 get_top_cpu() {
-    ps -eo %cpu,comm |
-        awk 'NR>1 && $2 !~ /^(ps|awk|grep|bash)$/ { arr[$2] += $1 } 
-             END { for (i in arr) { if (arr[i] > 0.1) printf "%.1f %s\n", arr[i], i } }' |
+    ps -eo %cpu,comm --no-headers |
+        awk '{ arr[$2] += $1 }
+             END { for (i in arr) printf "%.1f %s\n", arr[i], i }' |
         sort -rnk1 |
         head -5 |
         awk '{ printf "  %d. %s (%.1f%%)\n", ++n, $2, $1 }'
