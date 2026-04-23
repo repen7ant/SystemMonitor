@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/monitor.sh /var/log/sysmon 3600
+ExecStart=/usr/local/bin/monitor.sh /var/log/sysmon 3600 --retention 14
 Restart=on-failure
 RestartSec=10
 

@@ -10,12 +10,13 @@ BOLD='\033[1m'
 RESET='\033[0m'
 
 usage() {
-    echo -e "${CYAN}Usage:${RESET} $0 <log_directory> [interval_seconds]"
+    echo -e "${CYAN}Usage:${RESET} $0 <log_directory> [interval_seconds] [--retention <days>]"
     echo ""
     echo "  <log_directory>      Required. Path to the directory for log files."
     echo "  [interval_seconds]   Optional. Collection interval in seconds (default: 60)."
+    echo "  [--retention <days>] Optional. Delete logs older than N days (default: no deletion)."
     echo ""
-    echo -e "${CYAN}Example:${RESET} $0 /var/log/sysmon 30"
+    echo -e "${CYAN}Example:${RESET} $0 /var/log/sysmon 30 --retention 7"
     exit 1
 }
 
@@ -24,10 +25,47 @@ check_args() {
         echo -e "${RED}Error:${RESET} log directory is required."
         usage
     fi
-
     if ! [[ "${2:-60}" =~ ^[0-9]+$ ]] || [[ "${2:-60}" -lt 1 ]]; then
         echo -e "${RED}Error:${RESET} interval must be a positive integer."
         exit 1
+    fi
+    local i
+    for ((i = 1; i <= $#; i++)); do
+        if [[ "${!i}" == "--retention" ]]; then
+            local j=$((i + 1))
+            if [[ -z "${!j:-}" ]] || ! [[ "${!j}" =~ ^[0-9]+$ ]] || [[ "${!j}" -lt 1 ]]; then
+                echo -e "${RED}Error:${RESET} --retention requires a positive integer (days)."
+                exit 1
+            fi
+        fi
+    done
+}
+
+parse_retention() {
+    local args=("$@")
+    for ((i = 0; i < ${#args[@]}; i++)); do
+        if [[ "${args[$i]}" == "--retention" ]]; then
+            echo "${args[$((i + 1))]}"
+            return
+        fi
+    done
+    echo ""
+}
+
+cleanup_old_logs() {
+    local log_dir="$1"
+    local retention_days="$2"
+
+    [[ -z "$retention_days" ]] && return
+
+    local count
+    count=$(find "$log_dir" -maxdepth 1 -name "monitor_*.log" \
+        -mtime +"$retention_days" 2>/dev/null | wc -l)
+
+    if [[ "$count" -gt 0 ]]; then
+        find "$log_dir" -maxdepth 1 -name "monitor_*.log" \
+            -mtime +"$retention_days" -delete
+        echo -e "  deleted ${count} log(s) older than ${retention_days} day(s)\n"
     fi
 }
 
@@ -120,17 +158,16 @@ build_report() {
 
 write_report() {
     local log_dir="$1"
+    local retention_days="$2"
     local log_file="$log_dir/monitor_$(date +%Y-%m-%d).log"
     local timestamp
     timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
-
     local report
     report="$(build_report "$timestamp")"
-
     echo "$report" >>"$log_file"
-
     echo -e "${BOLD}${report}${RESET}"
     echo -e "  ${GREEN}✔${RESET} Written to ${CYAN}${log_file}${RESET}\n"
+    cleanup_old_logs "$log_dir" "$retention_days"
 }
 
 setup_trap() {
@@ -141,25 +178,29 @@ setup_trap() {
 
 main() {
     check_args "$@"
-
     local log_dir="$1"
     local interval="${2:-60}"
+    local retention_days
+    retention_days="$(parse_retention "$@")"
 
     init_log_dir "$log_dir"
-
     local log_file="$log_dir/monitor_$(date +%Y-%m-%d).log"
-
     setup_trap "$log_file"
 
     echo ""
     echo -e "${BOLD}Monitoring started${RESET}"
-    echo -e "  Log file : ${CYAN}${log_file}${RESET}"
-    echo -e "  Interval : ${CYAN}${interval}s${RESET}"
-    echo -e "  Stop with: ${YELLOW}Ctrl+C${RESET}"
+    echo -e "  Log file  : ${CYAN}${log_file}${RESET}"
+    echo -e "  Interval  : ${CYAN}${interval}s${RESET}"
+    if [[ -n "$retention_days" ]]; then
+        echo -e "  Retention : ${CYAN}${retention_days} day(s)${RESET}"
+    else
+        echo -e "  Retention : ${CYAN}disabled${RESET}"
+    fi
+    echo -e "  Stop with : ${YELLOW}Ctrl+C${RESET}"
     echo ""
 
     while true; do
-        write_report "$log_dir"
+        write_report "$log_dir" "$retention_days"
         sleep "$interval"
     done
 }
